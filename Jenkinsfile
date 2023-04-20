@@ -1,12 +1,17 @@
 pipeline {
     agent any
-
+    
     environment {
         BUCKET_NAME = 'mysqlbackup-idoc'
         BACKUP_FOLDER = '/home/ubuntu/mysql_backup/'
     }
-
+    
     stages {
+        stage('Creating Backup of Database'){
+            steps{
+                sh "/opt/jenkins_scripts/mysql_backup.sh"
+            }
+        }
         stage('Find backup file') {
             steps {
                 script {
@@ -20,7 +25,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Upload backup to S3') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'jenkinscreds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
