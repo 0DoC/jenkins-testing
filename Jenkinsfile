@@ -16,7 +16,7 @@ pipeline {
             steps {
                 script {
 		    sh "sleep 10s"
-                    def backupFile = sh(returnStdout: true, script: "ls -1 ${env.BACKUP_FOLDER}*.sql | tail -n 1").trim()
+                    def backupFile = sh(returnStdout: true, script: "ls -1tr ${env.BACKUP_FOLDER}*.sql | tail -n 1").trim()
                     if (backupFile) {
                         println "Found backup file: ${backupFile}"
                         env.BACKUP_FILE = backupFile
