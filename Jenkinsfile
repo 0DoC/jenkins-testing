@@ -1,19 +1,32 @@
 pipeline {
     agent any
+
+    environment {
+        BUCKET_NAME = 'mysqlbackup-idoc'
+        BACKUP_FOLDER = '/home/ubuntu/mysql_backup/'
+    }
+
     stages {
-        stage('Deploy backup on S3') {
+        stage('Find backup file') {
             steps {
-            // you need cloudbees aws credentials
-            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'jenkinscreds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                 script {
-                    script {
-                        POM_VERSION = sh(script: '/bin/bash -c \'mysqlpath=$(ls -al /home/ubuntu/mysql_backup/*.sql | awk \'{print $9}\'\') && aws s3 cp $mysqlpath s3://mysqlbackup-idoc/\'', returnStdout: true)
-                        echo "${POM_VERSION}"
+                    def backupFile = sh(returnStdout: true, script: "ls -1 ${env.BACKUP_FOLDER}*.sql | tail -n 1").trim()
+                    if (backupFile) {
+                        println "Found backup file: ${backupFile}"
+                        env.BACKUP_FILE = backupFile
+                    } else {
+                        error "No backup file found in ${env.BACKUP_FOLDER}"
                     }
                 }
             }
-    }
-    }
-}
-}
+        }
 
+        stage('Upload backup to S3') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'jenkinscreds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh "aws s3 cp ${env.BACKUP_FILE} s3://${env.BUCKET_NAME}/"
+                }
+            }
+        }
+    }
+}
